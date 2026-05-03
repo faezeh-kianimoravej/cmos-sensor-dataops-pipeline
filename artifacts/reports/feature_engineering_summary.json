@@ -1,0 +1,102 @@
+{
+  "status": "success",
+  "windowed_rows": 2025,
+  "train_rows": 1601,
+  "test_rows": 424,
+  "feature_rows": 2025,
+  "feature_columns": 42,
+  "windowed_path": "data/processed/windowed_timeseries.parquet",
+  "features_output_path": "data/processed/features_timeseries.parquet",
+  "dataset_storage": {
+    "environment": "dev",
+    "dataset_version": "data-20260417T162906Z",
+    "windowed": {
+      "local_path": "data/processed/windowed_timeseries.parquet",
+      "domain": "datasets",
+      "storage_target": {
+        "environment": "dev",
+        "pipeline": "feature-engineering",
+        "dataset_name": "windowed-timeseries",
+        "dataset_version": "data-20260417T162906Z",
+        "bucket": "datasets",
+        "prefix": "processed/feature-engineering/windowed-timeseries/data-20260417T162906Z/",
+        "key": "processed/feature-engineering/windowed-timeseries/data-20260417T162906Z/windowed_timeseries.parquet",
+        "uri": "s3://datasets/processed/feature-engineering/windowed-timeseries/data-20260417T162906Z/windowed_timeseries.parquet"
+      },
+      "storage_upload": {
+        "status": "uploaded",
+        "bucket": "datasets",
+        "key": "processed/feature-engineering/windowed-timeseries/data-20260417T162906Z/windowed_timeseries.parquet",
+        "uri": "s3://datasets/processed/feature-engineering/windowed-timeseries/data-20260417T162906Z/windowed_timeseries.parquet",
+        "endpoint_url": "http://minio:9000",
+        "local_path": "data/processed/windowed_timeseries.parquet"
+      }
+    },
+    "train_windows": {
+      "local_path": "data/processed/train_windows.parquet",
+      "domain": "datasets",
+      "storage_target": {
+        "environment": "dev",
+        "pipeline": "feature-engineering",
+        "dataset_name": "train-windows",
+        "dataset_version": "data-20260417T162906Z",
+        "bucket": "datasets",
+        "prefix": "processed/feature-engineering/train-windows/data-20260417T162906Z/",
+        "key": "processed/feature-engineering/train-windows/data-20260417T162906Z/train_windows.parquet",
+        "uri": "s3://datasets/processed/feature-engineering/train-windows/data-20260417T162906Z/train_windows.parquet"
+      },
+      "storage_upload": {
+        "status": "uploaded",
+        "bucket": "datasets",
+        "key": "processed/feature-engineering/train-windows/data-20260417T162906Z/train_windows.parquet",
+        "uri": "s3://datasets/processed/feature-engineering/train-windows/data-20260417T162906Z/train_windows.parquet",
+        "endpoint_url": "http://minio:9000",
+        "local_path": "data/processed/train_windows.parquet"
+      }
+    },
+    "test_windows": {
+      "local_path": "data/processed/test_windows.parquet",
+      "domain": "datasets",
+      "storage_target": {
+        "environment": "dev",
+        "pipeline": "feature-engineering",
+        "dataset_name": "test-windows",
+        "dataset_version": "data-20260417T162906Z",
+        "bucket": "datasets",
+        "prefix": "processed/feature-engineering/test-windows/data-20260417T162906Z/",
+        "key": "processed/feature-engineering/test-windows/data-20260417T162906Z/test_windows.parquet",
+        "uri": "s3://datasets/processed/feature-engineering/test-windows/data-20260417T162906Z/test_windows.parquet"
+      },
+      "storage_upload": {
+        "status": "uploaded",
+        "bucket": "datasets",
+        "key": "processed/feature-engineering/test-windows/data-20260417T162906Z/test_windows.parquet",
+        "uri": "s3://datasets/processed/feature-engineering/test-windows/data-20260417T162906Z/test_windows.parquet",
+        "endpoint_url": "http://minio:9000",
+        "local_path": "data/processed/test_windows.parquet"
+      }
+    },
+    "features_timeseries": {
+      "local_path": "data/processed/features_timeseries.parquet",
+      "domain": "datasets",
+      "storage_target": {
+        "environment": "dev",
+        "pipeline": "feature-engineering",
+        "dataset_name": "features-timeseries",
+        "dataset_version": "data-20260417T162906Z",
+        "bucket": "datasets",
+        "prefix": "processed/feature-engineering/features-timeseries/data-20260417T162906Z/",
+        "key": "processed/feature-engineering/features-timeseries/data-20260417T162906Z/features_timeseries.parquet",
+        "uri": "s3://datasets/processed/feature-engineering/features-timeseries/data-20260417T162906Z/features_timeseries.parquet"
+      },
+      "storage_upload": {
+        "status": "uploaded",
+        "bucket": "datasets",
+        "key": "processed/feature-engineering/features-timeseries/data-20260417T162906Z/features_timeseries.parquet",
+        "uri": "s3://datasets/processed/feature-engineering/features-timeseries/data-20260417T162906Z/features_timeseries.parquet",
+        "endpoint_url": "http://minio:9000",
+        "local_path": "data/processed/features_timeseries.parquet"
+      }
+    }
+  }
+}

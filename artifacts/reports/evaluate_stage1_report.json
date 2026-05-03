@@ -1,0 +1,21 @@
+{
+  "stage": "stage6",
+  "target_stage": "stage1",
+  "rows": 2025,
+  "accuracy": 0.9708641975308642,
+  "f1": 0.9018302828618968,
+  "confusion_matrix": [
+    [
+      1695,
+      24
+    ],
+    [
+      35,
+      271
+    ]
+  ],
+  "labels": [
+    0,
+    1
+  ]
+}

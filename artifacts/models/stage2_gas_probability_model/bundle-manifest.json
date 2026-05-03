@@ -1,0 +1,32 @@
+{
+  "stage": "stage2",
+  "model_name": "stage2-gas-probability-model",
+  "model_version": "model-20260417T163936Z",
+  "storage_environment": "dev",
+  "published_at": "2026-04-17T16:39:36Z",
+  "artifacts": {
+    "model": {
+      "environment": "dev",
+      "model_family": "stage2",
+      "model_name": "stage2-gas-probability-model",
+      "model_version": "model-20260417T163936Z",
+      "bucket": "models",
+      "prefix": "stage2/stage2-gas-probability-model/model-20260417T163936Z/",
+      "key": "stage2/stage2-gas-probability-model/model-20260417T163936Z/model.joblib",
+      "uri": "s3://models/stage2/stage2-gas-probability-model/model-20260417T163936Z/model.joblib"
+    },
+    "metadata": {
+      "environment": "dev",
+      "model_family": "stage2",
+      "model_name": "stage2-gas-probability-model",
+      "model_version": "model-20260417T163936Z",
+      "bucket": "models",
+      "prefix": "stage2/stage2-gas-probability-model/model-20260417T163936Z/",
+      "key": "stage2/stage2-gas-probability-model/model-20260417T163936Z/metadata.json",
+      "uri": "s3://models/stage2/stage2-gas-probability-model/model-20260417T163936Z/metadata.json"
+    }
+  },
+  "source": {
+    "publisher": "train_stage2_probability_model"
+  }
+}

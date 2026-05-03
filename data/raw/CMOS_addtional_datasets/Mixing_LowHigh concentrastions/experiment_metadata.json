@@ -1,0 +1,22 @@
+{
+  "dataset_name": "Mixing_LowHigh_concentrations",
+  "experiment_type": "mixture",
+  "gas_components": ["toluene", "2-butanone"],
+  "concentration_schedule_ppm": [
+    10000, 8000, 6000, 4000, 2000,
+    4000, 6000, 8000, 10000
+  ],
+  "total_concentration_ppm": 12000,
+  "total_flow_rate_ml_min": 4,
+  "segments": [
+    { "segment_id": 1, "approx_start_sec": 600, "approx_end_sec": 1200, "concentration_ppm": 10000 },
+    { "segment_id": 2, "approx_start_sec": 1800, "approx_end_sec": 2400, "concentration_ppm": 8000 },
+    { "segment_id": 3, "approx_start_sec": 3000, "approx_end_sec": 3600, "concentration_ppm": 6000 },
+    { "segment_id": 4, "approx_start_sec": 4200, "approx_end_sec": 4800, "concentration_ppm": 4000 },
+    { "segment_id": 5, "approx_start_sec": 5400, "approx_end_sec": 6000, "concentration_ppm": 2000 },
+    { "segment_id": 6, "approx_start_sec": 6600, "approx_end_sec": 7200, "concentration_ppm": 4000 },
+    { "segment_id": 7, "approx_start_sec": 7800, "approx_end_sec": 8400, "concentration_ppm": 6000 },
+    { "segment_id": 8, "approx_start_sec": 9000, "approx_end_sec": 9600, "concentration_ppm": 8000 },
+    { "segment_id": 9, "approx_start_sec": 10200, "approx_end_sec": 10800, "concentration_ppm": 10000 }
+  ]
+}

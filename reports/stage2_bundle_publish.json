@@ -1,0 +1,72 @@
+{
+  "storage_environment": "prod",
+  "model_version": "model-20260411T121602Z",
+  "artifacts": {
+    "model": {
+      "local_path": "artifacts\\models\\stage2_gas_probability_model\\model.joblib",
+      "domain": "models",
+      "storage_target": {
+        "environment": "prod",
+        "model_family": "stage2",
+        "model_name": "stage2-gas-probability-model",
+        "model_version": "model-20260411T121602Z",
+        "bucket": "observed-api-models-272296662618",
+        "prefix": "stage2/stage2-gas-probability-model/model-20260411T121602Z/",
+        "key": "stage2/stage2-gas-probability-model/model-20260411T121602Z/model.joblib",
+        "uri": "s3://observed-api-models-272296662618/stage2/stage2-gas-probability-model/model-20260411T121602Z/model.joblib"
+      },
+      "storage_upload": {
+        "status": "uploaded",
+        "bucket": "observed-api-models-272296662618",
+        "key": "stage2/stage2-gas-probability-model/model-20260411T121602Z/model.joblib",
+        "uri": "s3://observed-api-models-272296662618/stage2/stage2-gas-probability-model/model-20260411T121602Z/model.joblib",
+        "endpoint_url": null,
+        "local_path": "artifacts\\models\\stage2_gas_probability_model\\model.joblib"
+      }
+    },
+    "metadata": {
+      "local_path": "artifacts\\models\\stage2_gas_probability_model\\metadata.json",
+      "domain": "models",
+      "storage_target": {
+        "environment": "prod",
+        "model_family": "stage2",
+        "model_name": "stage2-gas-probability-model",
+        "model_version": "model-20260411T121602Z",
+        "bucket": "observed-api-models-272296662618",
+        "prefix": "stage2/stage2-gas-probability-model/model-20260411T121602Z/",
+        "key": "stage2/stage2-gas-probability-model/model-20260411T121602Z/metadata.json",
+        "uri": "s3://observed-api-models-272296662618/stage2/stage2-gas-probability-model/model-20260411T121602Z/metadata.json"
+      },
+      "storage_upload": {
+        "status": "uploaded",
+        "bucket": "observed-api-models-272296662618",
+        "key": "stage2/stage2-gas-probability-model/model-20260411T121602Z/metadata.json",
+        "uri": "s3://observed-api-models-272296662618/stage2/stage2-gas-probability-model/model-20260411T121602Z/metadata.json",
+        "endpoint_url": null,
+        "local_path": "artifacts\\models\\stage2_gas_probability_model\\metadata.json"
+      }
+    },
+    "manifest": {
+      "local_path": "artifacts\\models\\stage2_gas_probability_model\\bundle-manifest.json",
+      "domain": "models",
+      "storage_target": {
+        "environment": "prod",
+        "model_family": "stage2",
+        "model_name": "stage2-gas-probability-model",
+        "model_version": "model-20260411T121602Z",
+        "bucket": "observed-api-models-272296662618",
+        "prefix": "stage2/stage2-gas-probability-model/model-20260411T121602Z/",
+        "key": "stage2/stage2-gas-probability-model/model-20260411T121602Z/bundle-manifest.json",
+        "uri": "s3://observed-api-models-272296662618/stage2/stage2-gas-probability-model/model-20260411T121602Z/bundle-manifest.json"
+      },
+      "storage_upload": {
+        "status": "uploaded",
+        "bucket": "observed-api-models-272296662618",
+        "key": "stage2/stage2-gas-probability-model/model-20260411T121602Z/bundle-manifest.json",
+        "uri": "s3://observed-api-models-272296662618/stage2/stage2-gas-probability-model/model-20260411T121602Z/bundle-manifest.json",
+        "endpoint_url": null,
+        "local_path": "artifacts\\models\\stage2_gas_probability_model\\bundle-manifest.json"
+      }
+    }
+  }
+}

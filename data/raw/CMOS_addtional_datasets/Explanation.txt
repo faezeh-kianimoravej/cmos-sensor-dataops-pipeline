@@ -1,0 +1,15 @@
+
+
+I uploaded several files.
+
+**Mixing_LowHigh_concentrations** – We mixed toluene and 2‑butanone at different concentrations. You can also see a screenshot of the final diagram with the mixing parameters, such as flow rates, concentrations, and so on.
+
+**Mixing_Same_concentrations** – We mixed the same two VOCs, but here with the same concentration. We repeated the measurements three times to check the repeatability. It would be good for you to test all three data sets as well.
+
+**UV_ink – 2‑butanone** – Pure 2‑butanone gas on a UV‑ink layer used as the affinity layer, repeated twice.
+
+**UV_ink – Toluene** – Pure toluene gas on a UV‑ink layer used as the affinity layer, repeated twice.
+
+**ZIF8_ink – 2‑butanone** – Pure 2‑butanone gas on a ZIF‑8 ink layer used as the affinity layer, repeated twice.
+
+**ZIF8_layer – Toluene** – Pure toluene gas on a ZIF‑8 layer used as the affinity layer, repeated twice.

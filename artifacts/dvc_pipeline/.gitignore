@@ -1,0 +1,12 @@
+/manifest_runs
+/manifest_ingestion_summary.json
+/runs_registry.parquet
+/events_detected_dat.parquet
+/features_event_table_dat.parquet
+/standardized
+/run_quality_audit.parquet
+/baseline_model.pkl
+/training_metrics.json
+/model_comparison.json
+/feature_importance.parquet
+/test_prediction_errors.parquet

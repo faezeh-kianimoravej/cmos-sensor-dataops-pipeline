@@ -1,0 +1,117 @@
+storage:
+  object_store: minio
+  environment_variable: OBSERVED_STORAGE_ENV
+  default_environment: dev
+
+  buckets:
+    mlflow_artifacts: mlflow-artifacts
+    datasets: datasets
+    reports: reports
+    models: models
+    batch_predictions: batch-predictions
+
+  prefixes:
+    datasets: "processed/{pipeline}/{dataset_name}/{dataset_version}/"
+    reports: "evaluation/{pipeline}/{report_family}/{run_id}/"
+    models: "{model_family}/{model_name}/{model_version}/"
+    batch_predictions: "{prediction_job}/{job_date}/{job_id}/"
+
+  naming_rules:
+    env_values:
+      - dev
+      - staging
+      - prod
+    date_format: "YYYY/MM/DD"
+    timestamp_format: "YYYYMMDDTHHMMSSZ"
+    run_id_format: "airflow_run_id | mlflow_run_id | manual-<timestamp>"
+    dataset_version_format: "dvc-<short_hash> | data-<timestamp>"
+    model_version_format: "mlflow-model-version | git-<short_sha> | model-<timestamp>"
+    prediction_job_values:
+      - batch-inference
+    file_naming:
+      dataset_files:
+        - dataset.parquet
+        - manifest.json
+        - schema.json
+      report_files:
+        - report.json
+        - metrics.json
+        - summary.json
+      model_bundle_files:
+        - model.joblib
+        - metadata.json
+        - signature.json
+      prediction_files:
+        - predictions.parquet
+        - summary.json
+
+  local_to_object_mapping:
+    data/processed/processed_timeseries.parquet:
+      bucket: datasets
+      prefix: "processed/ingest/processed-timeseries/{dataset_version}/"
+    data/processed/runs.parquet:
+      bucket: datasets
+      prefix: "processed/ingest/runs/{dataset_version}/"
+    data/processed/windowed_timeseries.parquet:
+      bucket: datasets
+      prefix: "processed/feature-engineering/windowed-timeseries/{dataset_version}/"
+    data/processed/train_windows.parquet:
+      bucket: datasets
+      prefix: "processed/feature-engineering/train-windows/{dataset_version}/"
+    data/processed/test_windows.parquet:
+      bucket: datasets
+      prefix: "processed/feature-engineering/test-windows/{dataset_version}/"
+    data/processed/features_timeseries.parquet:
+      bucket: datasets
+      prefix: "processed/feature-engineering/features-timeseries/{dataset_version}/"
+    data/processed/features_single_gas.parquet:
+      bucket: datasets
+      prefix: "processed/stage2-subset/features-single-gas/{dataset_version}/"
+    artifacts/reports/ingestion_summary.json:
+      bucket: reports
+      prefix: "evaluation/ingest/summary/{run_id}/"
+    artifacts/reports/feature_engineering_summary.json:
+      bucket: reports
+      prefix: "evaluation/feature-engineering/summary/{run_id}/"
+    artifacts/reports/stage1_model_comparison.json:
+      bucket: reports
+      prefix: "evaluation/stage1/model-comparison/{run_id}/"
+    artifacts/reports/stage1_cv_metrics.json:
+      bucket: reports
+      prefix: "evaluation/stage1/cv-metrics/{run_id}/"
+    artifacts/reports/stage2_subset_summary.json:
+      bucket: reports
+      prefix: "evaluation/stage2-subset/summary/{run_id}/"
+    artifacts/reports/stage2_model_comparison.json:
+      bucket: reports
+      prefix: "evaluation/stage2/model-comparison/{run_id}/"
+    artifacts/reports/stage2_tuning_results.json:
+      bucket: reports
+      prefix: "evaluation/stage2/tuning-results/{run_id}/"
+    artifacts/reports/stage2_cv_metrics.json:
+      bucket: reports
+      prefix: "evaluation/stage2/cv-metrics/{run_id}/"
+    artifacts/reports/evaluate_stage1_report.json:
+      bucket: reports
+      prefix: "evaluation/stage1/evaluation-report/{run_id}/"
+    artifacts/reports/evaluate_stage2_report.json:
+      bucket: reports
+      prefix: "evaluation/stage2/evaluation-report/{run_id}/"
+    artifacts/reports/batch_prediction_summary.json:
+      bucket: reports
+      prefix: "evaluation/batch-prediction/summary/{run_id}/"
+    artifacts/models/stage1_mixture_detector:
+      bucket: models
+      prefix: "stage1/stage1-mixture-detector/{model_version}/"
+    artifacts/models/stage2_gas_probability_model:
+      bucket: models
+      prefix: "stage2/stage2-gas-probability-model/{model_version}/"
+    artifacts/predictions/stage1_training_predictions.parquet:
+      bucket: batch_predictions
+      prefix: "batch-inference/training-predictions/{job_date}/{job_id}/stage1/"
+    artifacts/predictions/stage2_training_predictions.parquet:
+      bucket: batch_predictions
+      prefix: "batch-inference/training-predictions/{job_date}/{job_id}/stage2/"
+    artifacts/predictions/batch_predictions.parquet:
+      bucket: batch_predictions
+      prefix: "batch-inference/serving-output/{job_date}/{job_id}/"

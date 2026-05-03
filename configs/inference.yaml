@@ -1,0 +1,13 @@
+extends: default.yaml
+
+inference:
+  batch_size: 1
+  output_fields:
+    - anomaly_score
+    - severity_class
+    - concentration_proxy
+    - sensor_health
+
+api:
+  host: 0.0.0.0
+  port: 8000

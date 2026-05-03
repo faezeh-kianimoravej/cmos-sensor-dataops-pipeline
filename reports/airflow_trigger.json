@@ -1,0 +1,17 @@
+{
+  "status": "skipped",
+  "dag_id": "gas_sensor_ml_pipeline",
+  "required": false,
+  "metadata": {
+    "commit_sha": "local-dry-run-sha",
+    "commit_short_sha": "",
+    "branch": "local-dry-run-branch",
+    "pipeline_id": "local-0005",
+    "pipeline_url": "",
+    "project_path": "",
+    "trigger_source": "local",
+    "job_url": ""
+  },
+  "trigger": {},
+  "reason": "AIRFLOW_API_URL is not configured"
+}

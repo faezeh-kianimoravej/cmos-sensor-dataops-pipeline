@@ -1,0 +1,32 @@
+{
+  "status": "success",
+  "subset_rows": 1719,
+  "source_rows": 2025,
+  "subset_path": "data/processed/features_single_gas.parquet",
+  "dataset_storage": {
+    "environment": "dev",
+    "dataset_version": "data-20260417T163401Z",
+    "features_single_gas": {
+      "local_path": "data/processed/features_single_gas.parquet",
+      "domain": "datasets",
+      "storage_target": {
+        "environment": "dev",
+        "pipeline": "stage2-subset",
+        "dataset_name": "features-single-gas",
+        "dataset_version": "data-20260417T163401Z",
+        "bucket": "datasets",
+        "prefix": "processed/stage2-subset/features-single-gas/data-20260417T163401Z/",
+        "key": "processed/stage2-subset/features-single-gas/data-20260417T163401Z/features_single_gas.parquet",
+        "uri": "s3://datasets/processed/stage2-subset/features-single-gas/data-20260417T163401Z/features_single_gas.parquet"
+      },
+      "storage_upload": {
+        "status": "uploaded",
+        "bucket": "datasets",
+        "key": "processed/stage2-subset/features-single-gas/data-20260417T163401Z/features_single_gas.parquet",
+        "uri": "s3://datasets/processed/stage2-subset/features-single-gas/data-20260417T163401Z/features_single_gas.parquet",
+        "endpoint_url": "http://minio:9000",
+        "local_path": "data/processed/features_single_gas.parquet"
+      }
+    }
+  }
+}

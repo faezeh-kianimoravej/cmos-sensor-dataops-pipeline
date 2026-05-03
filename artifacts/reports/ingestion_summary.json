@@ -1,0 +1,56 @@
+{
+  "status": "success",
+  "raw_root": "data/raw/CMOS_addtional_datasets",
+  "runs_discovered": 16,
+  "runs_processed": 14,
+  "runs_path": "data/processed/runs.parquet",
+  "processed_timeseries_path": "data/processed/processed_timeseries.parquet",
+  "dataset_storage": {
+    "environment": "dev",
+    "dataset_version": "data-20260417T162857Z",
+    "runs": {
+      "local_path": "data/processed/runs.parquet",
+      "domain": "datasets",
+      "storage_target": {
+        "environment": "dev",
+        "pipeline": "ingest",
+        "dataset_name": "runs",
+        "dataset_version": "data-20260417T162857Z",
+        "bucket": "datasets",
+        "prefix": "processed/ingest/runs/data-20260417T162857Z/",
+        "key": "processed/ingest/runs/data-20260417T162857Z/runs.parquet",
+        "uri": "s3://datasets/processed/ingest/runs/data-20260417T162857Z/runs.parquet"
+      },
+      "storage_upload": {
+        "status": "uploaded",
+        "bucket": "datasets",
+        "key": "processed/ingest/runs/data-20260417T162857Z/runs.parquet",
+        "uri": "s3://datasets/processed/ingest/runs/data-20260417T162857Z/runs.parquet",
+        "endpoint_url": "http://minio:9000",
+        "local_path": "data/processed/runs.parquet"
+      }
+    },
+    "processed_timeseries": {
+      "local_path": "data/processed/processed_timeseries.parquet",
+      "domain": "datasets",
+      "storage_target": {
+        "environment": "dev",
+        "pipeline": "ingest",
+        "dataset_name": "processed-timeseries",
+        "dataset_version": "data-20260417T162857Z",
+        "bucket": "datasets",
+        "prefix": "processed/ingest/processed-timeseries/data-20260417T162857Z/",
+        "key": "processed/ingest/processed-timeseries/data-20260417T162857Z/processed_timeseries.parquet",
+        "uri": "s3://datasets/processed/ingest/processed-timeseries/data-20260417T162857Z/processed_timeseries.parquet"
+      },
+      "storage_upload": {
+        "status": "uploaded",
+        "bucket": "datasets",
+        "key": "processed/ingest/processed-timeseries/data-20260417T162857Z/processed_timeseries.parquet",
+        "uri": "s3://datasets/processed/ingest/processed-timeseries/data-20260417T162857Z/processed_timeseries.parquet",
+        "endpoint_url": "http://minio:9000",
+        "local_path": "data/processed/processed_timeseries.parquet"
+      }
+    }
+  }
+}

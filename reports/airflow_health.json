@@ -1,0 +1,15 @@
+{
+  "status": "skipped",
+  "airflow_api_url": "",
+  "health_url": "/health",
+  "retries": 60,
+  "retry_delay_sec": 5.0,
+  "required": false,
+  "reason": "AIRFLOW_API_URL is not configured",
+  "checks": {
+    "webserver": false,
+    "metadatabase": false,
+    "scheduler": false
+  },
+  "attempts": []
+}

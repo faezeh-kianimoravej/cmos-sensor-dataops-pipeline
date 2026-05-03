@@ -1,0 +1,25 @@
+extends: default.yaml
+
+training:
+  split_strategy: by_run
+  validation_strategy: unseen_runs
+  model_families:
+    - unsupervised
+    - classical_ml
+    - deep_learning
+  metrics:
+    - f1
+    - pr_auc
+    - roc_auc
+    - rmse
+    - mae
+
+models:
+  unsupervised:
+    algorithm: isolation_forest
+  classical_ml:
+    algorithms:
+      - random_forest
+      - xgboost
+  deep_learning:
+    architecture: tcn

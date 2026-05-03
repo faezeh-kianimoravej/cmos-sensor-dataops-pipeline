@@ -1,0 +1,52 @@
+{
+  "status": "success",
+  "rows": 2025,
+  "features_input_path": "data/processed/features_timeseries.parquet",
+  "features_source": "loaded",
+  "stage1_model_dir": "artifacts/models/stage1_mixture_detector",
+  "stage2_model_dir": "artifacts/models/stage2_gas_probability_model",
+  "predictions_path": "artifacts/predictions/batch_predictions.parquet",
+  "predictions_format": "parquet",
+  "single_gas_predicted_rows": 1730,
+  "mixture_predicted_rows": 295,
+  "prediction_job": "batch-inference",
+  "job_date": "2026/04/17",
+  "job_id": "manual-20260417T165828Z",
+  "storage_environment": "dev",
+  "predictions_storage_target": {
+    "environment": "dev",
+    "prediction_job": "batch-inference",
+    "job_date": "2026/04/17",
+    "job_id": "manual-20260417T165828Z",
+    "bucket": "batch-predictions",
+    "prefix": "batch-inference/2026/04/17/manual-20260417T165828Z/",
+    "key": "batch-inference/2026/04/17/manual-20260417T165828Z/batch_predictions.parquet",
+    "uri": "s3://batch-predictions/batch-inference/2026/04/17/manual-20260417T165828Z/batch_predictions.parquet"
+  },
+  "predictions_storage_upload": {
+    "status": "uploaded",
+    "bucket": "batch-predictions",
+    "key": "batch-inference/2026/04/17/manual-20260417T165828Z/batch_predictions.parquet",
+    "uri": "s3://batch-predictions/batch-inference/2026/04/17/manual-20260417T165828Z/batch_predictions.parquet",
+    "endpoint_url": "http://minio:9000",
+    "local_path": "artifacts/predictions/batch_predictions.parquet"
+  },
+  "summary_storage_target": {
+    "environment": "dev",
+    "pipeline": "batch-inference",
+    "report_family": "prediction-summary",
+    "run_id": "manual-20260417T165828Z",
+    "bucket": "reports",
+    "prefix": "evaluation/batch-inference/prediction-summary/manual-20260417T165828Z/",
+    "key": "evaluation/batch-inference/prediction-summary/manual-20260417T165828Z/batch_prediction_summary.json",
+    "uri": "s3://reports/evaluation/batch-inference/prediction-summary/manual-20260417T165828Z/batch_prediction_summary.json"
+  },
+  "summary_storage_upload": {
+    "status": "uploaded",
+    "bucket": "reports",
+    "key": "evaluation/batch-inference/prediction-summary/manual-20260417T165828Z/batch_prediction_summary.json",
+    "uri": "s3://reports/evaluation/batch-inference/prediction-summary/manual-20260417T165828Z/batch_prediction_summary.json",
+    "endpoint_url": "http://minio:9000",
+    "local_path": "artifacts/reports/batch_prediction_summary.json"
+  }
+}

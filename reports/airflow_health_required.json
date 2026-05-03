@@ -1,0 +1,51 @@
+{
+  "status": "fail",
+  "airflow_api_url": "http://localhost:8080/api/v1",
+  "health_url": "http://localhost:8080/api/v1/health",
+  "retries": 10,
+  "retry_delay_sec": 3.0,
+  "required": false,
+  "attempts": [
+    {
+      "attempt": 1,
+      "error": "Remote end closed connection without response"
+    },
+    {
+      "attempt": 2,
+      "error": "Remote end closed connection without response"
+    },
+    {
+      "attempt": 3,
+      "error": "Remote end closed connection without response"
+    },
+    {
+      "attempt": 4,
+      "error": "Remote end closed connection without response"
+    },
+    {
+      "attempt": 5,
+      "error": "Remote end closed connection without response"
+    },
+    {
+      "attempt": 6,
+      "error": "Remote end closed connection without response"
+    },
+    {
+      "attempt": 7,
+      "error": "Remote end closed connection without response"
+    },
+    {
+      "attempt": 8,
+      "error": "Remote end closed connection without response"
+    },
+    {
+      "attempt": 9,
+      "error": "Remote end closed connection without response"
+    },
+    {
+      "attempt": 10,
+      "error": "Remote end closed connection without response"
+    }
+  ],
+  "error": "Remote end closed connection without response"
+}

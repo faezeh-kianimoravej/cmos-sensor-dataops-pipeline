@@ -1,0 +1,37 @@
+{
+  "dataset_name": "ZIF8_toluene",
+  "experiment_type": "single_gas",
+  "gas_components": ["toluene"],
+  "class_label": "single_toluene",
+  "sensor_layer": "ZIF8",
+  "num_repeats": 2,
+  "reference_image": "2m.png",
+  "time_unit": "seconds",
+  "signal_unit": "ADC (a.u.)",
+  "concentration_schedule_ppm": [
+    500,
+    1000,
+    3000,
+    5000,
+    7000,
+    9000,
+    7000,
+    5000,
+    3000,
+    1000,
+    500
+  ],
+  "segments": [
+    { "segment_id": 1,  "approx_start_sec": 600,  "approx_end_sec": 1300,  "concentration_ppm": 500 },
+    { "segment_id": 2,  "approx_start_sec": 1800, "approx_end_sec": 2500,  "concentration_ppm": 1000 },
+    { "segment_id": 3,  "approx_start_sec": 3000, "approx_end_sec": 3700,  "concentration_ppm": 3000 },
+    { "segment_id": 4,  "approx_start_sec": 4200, "approx_end_sec": 5000,  "concentration_ppm": 5000 },
+    { "segment_id": 5,  "approx_start_sec": 5400, "approx_end_sec": 6100,  "concentration_ppm": 7000 },
+    { "segment_id": 6,  "approx_start_sec": 6600, "approx_end_sec": 7400,  "concentration_ppm": 9000 },
+    { "segment_id": 7,  "approx_start_sec": 7800, "approx_end_sec": 8500,  "concentration_ppm": 7000 },
+    { "segment_id": 8,  "approx_start_sec": 9000, "approx_end_sec": 9800,  "concentration_ppm": 5000 },
+    { "segment_id": 9,  "approx_start_sec": 10200, "approx_end_sec": 10900, "concentration_ppm": 3000 },
+    { "segment_id": 10, "approx_start_sec": 11400, "approx_end_sec": 12100, "concentration_ppm": 1000 },
+    { "segment_id": 11, "approx_start_sec": 12600, "approx_end_sec": 13300, "concentration_ppm": 500 }
+  ]
+}

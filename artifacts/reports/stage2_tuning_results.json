@@ -1,0 +1,19 @@
+{
+  "logistic_regression": {
+    "best_params": {
+      "model__C": 0.01,
+      "model__class_weight": null
+    },
+    "best_cv_f1": 0.7392589832569589
+  },
+  "gradient_boosting": {
+    "best_params": {
+      "model__learning_rate": 0.01,
+      "model__max_depth": 1,
+      "model__n_estimators": 50
+    },
+    "best_cv_f1": 0.8649091286468957
+  },
+  "final_selected_model": "gradient_boosting_tuned",
+  "final_selected_score_f1": 0.8649091286468957
+}

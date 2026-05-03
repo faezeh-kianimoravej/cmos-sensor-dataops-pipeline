@@ -1,0 +1,72 @@
+{
+  "storage_environment": "prod",
+  "model_version": "model-20260411T121429Z",
+  "artifacts": {
+    "model": {
+      "local_path": "artifacts\\models\\stage1_mixture_detector\\model.joblib",
+      "domain": "models",
+      "storage_target": {
+        "environment": "prod",
+        "model_family": "stage1",
+        "model_name": "stage1-mixture-detector",
+        "model_version": "model-20260411T121429Z",
+        "bucket": "observed-api-models-272296662618",
+        "prefix": "stage1/stage1-mixture-detector/model-20260411T121429Z/",
+        "key": "stage1/stage1-mixture-detector/model-20260411T121429Z/model.joblib",
+        "uri": "s3://observed-api-models-272296662618/stage1/stage1-mixture-detector/model-20260411T121429Z/model.joblib"
+      },
+      "storage_upload": {
+        "status": "uploaded",
+        "bucket": "observed-api-models-272296662618",
+        "key": "stage1/stage1-mixture-detector/model-20260411T121429Z/model.joblib",
+        "uri": "s3://observed-api-models-272296662618/stage1/stage1-mixture-detector/model-20260411T121429Z/model.joblib",
+        "endpoint_url": null,
+        "local_path": "artifacts\\models\\stage1_mixture_detector\\model.joblib"
+      }
+    },
+    "metadata": {
+      "local_path": "artifacts\\models\\stage1_mixture_detector\\metadata.json",
+      "domain": "models",
+      "storage_target": {
+        "environment": "prod",
+        "model_family": "stage1",
+        "model_name": "stage1-mixture-detector",
+        "model_version": "model-20260411T121429Z",
+        "bucket": "observed-api-models-272296662618",
+        "prefix": "stage1/stage1-mixture-detector/model-20260411T121429Z/",
+        "key": "stage1/stage1-mixture-detector/model-20260411T121429Z/metadata.json",
+        "uri": "s3://observed-api-models-272296662618/stage1/stage1-mixture-detector/model-20260411T121429Z/metadata.json"
+      },
+      "storage_upload": {
+        "status": "uploaded",
+        "bucket": "observed-api-models-272296662618",
+        "key": "stage1/stage1-mixture-detector/model-20260411T121429Z/metadata.json",
+        "uri": "s3://observed-api-models-272296662618/stage1/stage1-mixture-detector/model-20260411T121429Z/metadata.json",
+        "endpoint_url": null,
+        "local_path": "artifacts\\models\\stage1_mixture_detector\\metadata.json"
+      }
+    },
+    "manifest": {
+      "local_path": "artifacts\\models\\stage1_mixture_detector\\bundle-manifest.json",
+      "domain": "models",
+      "storage_target": {
+        "environment": "prod",
+        "model_family": "stage1",
+        "model_name": "stage1-mixture-detector",
+        "model_version": "model-20260411T121429Z",
+        "bucket": "observed-api-models-272296662618",
+        "prefix": "stage1/stage1-mixture-detector/model-20260411T121429Z/",
+        "key": "stage1/stage1-mixture-detector/model-20260411T121429Z/bundle-manifest.json",
+        "uri": "s3://observed-api-models-272296662618/stage1/stage1-mixture-detector/model-20260411T121429Z/bundle-manifest.json"
+      },
+      "storage_upload": {
+        "status": "uploaded",
+        "bucket": "observed-api-models-272296662618",
+        "key": "stage1/stage1-mixture-detector/model-20260411T121429Z/bundle-manifest.json",
+        "uri": "s3://observed-api-models-272296662618/stage1/stage1-mixture-detector/model-20260411T121429Z/bundle-manifest.json",
+        "endpoint_url": null,
+        "local_path": "artifacts\\models\\stage1_mixture_detector\\bundle-manifest.json"
+      }
+    }
+  }
+}

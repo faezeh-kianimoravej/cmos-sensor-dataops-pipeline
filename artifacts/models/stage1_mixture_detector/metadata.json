@@ -1,0 +1,43 @@
+{
+  "stage": "stage1",
+  "task": "single_vs_mixture",
+  "model_name": "gradient_boosting",
+  "feature_columns": [
+    "trend_slope",
+    "trend_type",
+    "peak_value",
+    "peak_position",
+    "rise_strength",
+    "fall_strength",
+    "mean",
+    "std",
+    "min",
+    "max",
+    "median",
+    "range",
+    "iqr",
+    "cv",
+    "first_diff_mean",
+    "first_diff_std",
+    "first_diff_max",
+    "first_diff_min",
+    "abs_diff_mean",
+    "sign_changes",
+    "diff_sign_changes",
+    "net_change",
+    "energy",
+    "skewness",
+    "kurtosis",
+    "flatness",
+    "zero_crossing_rate_diff",
+    "signal_start",
+    "signal_end",
+    "peak_to_start_distance",
+    "peak_to_end_distance",
+    "relative_peak_position"
+  ],
+  "classes": [
+    0,
+    1
+  ]
+}

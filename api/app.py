@@ -1,0 +1,535 @@
+"""FastAPI app for hierarchical stage-1/stage-2 inference."""
+
+from __future__ import annotations
+
+import json
+import time
+from pathlib import Path
+from typing import Any
+
+try:
+    from fastapi import Body, FastAPI, HTTPException
+
+    FASTAPI_AVAILABLE = True
+except ImportError:
+    FASTAPI_AVAILABLE = False
+
+import numpy as np
+import pandas as pd
+
+from api.models_loader import ModelLoader
+from api.schemas import (
+    HealthResponse,
+    ModelInfoResponse,
+    PredictRawRequest,
+    PredictRequest,
+    PredictResponse,
+    Stage1ProbabilityResult,
+    Stage2ProbabilityResult,
+)
+from api.utils import get_git_commit_hash
+from src.data.preprocess import build_windowed_timeseries
+from src.features.extractor import build_feature_table
+from src.observed.utils.config import load_config
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+MODELS_DIR = REPO_ROOT / "artifacts" / "models"
+
+_stage_loader = ModelLoader(MODELS_DIR)
+_startup_time = time.time()
+_git_commit = get_git_commit_hash()
+
+
+def _request_to_feature_dict(request: PredictRequest) -> dict[str, float]:
+    if hasattr(request, "model_dump"):
+        payload = request.model_dump(exclude_none=True)
+    else:
+        payload = request.dict(exclude_none=True)
+
+    feature_dict: dict[str, float] = {}
+
+    nested_features = payload.pop("features", None)
+    if isinstance(nested_features, dict):
+        for key, value in nested_features.items():
+            if isinstance(value, (int, float, np.integer, np.floating)):
+                feature_dict[str(key)] = float(value)
+
+    payload.pop("run_id", None)
+    payload.pop("event_id", None)
+
+    for key, value in payload.items():
+        if isinstance(value, (int, float, np.integer, np.floating)):
+            feature_dict[str(key)] = float(value)
+
+    return feature_dict
+
+
+def _align_features(
+    feature_dict: dict[str, float], feature_columns: list[str]
+) -> pd.DataFrame:
+    aligned = {name: float(feature_dict.get(name, 0.0)) for name in feature_columns}
+    frame = pd.DataFrame([aligned], columns=feature_columns)
+    values = np.nan_to_num(frame.to_numpy(dtype=float), nan=0.0, posinf=0.0, neginf=0.0)
+    return pd.DataFrame(values, columns=feature_columns)
+
+
+def _stage_version_label(stage_metadata: dict[str, Any], fallback: str) -> str:
+    model_name = stage_metadata.get("model_name")
+    if isinstance(model_name, str) and model_name:
+        return model_name
+    return fallback
+
+
+def _normalized_model_name(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+def _load_bundle_manifest_model_name(stage: str) -> str | None:
+    artifact_paths = _stage_loader.model_artifact_paths().get(stage, {})
+    manifest_path = artifact_paths.get("manifest_path")
+    if not manifest_path:
+        return None
+
+    manifest_file = Path(manifest_path)
+    if not manifest_file.exists():
+        return None
+
+    try:
+        manifest_payload = manifest_file.read_text(encoding="utf-8")
+        manifest = json.loads(manifest_payload)
+    except Exception:
+        return None
+
+    return _normalized_model_name(manifest.get("model_name"))
+
+
+def _list_local_available_models() -> list[str]:
+    available: list[str] = []
+    for stage, artifact_paths in _stage_loader.model_artifact_paths().items():
+        model_path = artifact_paths.get("model_path")
+        metadata_path = artifact_paths.get("metadata_path")
+        if not model_path or not metadata_path:
+            continue
+        if Path(model_path).exists() and Path(metadata_path).exists():
+            available.append(stage)
+    return available
+
+
+def _resolve_reported_model_name(
+    stage: str, model: Any, stage_metadata: dict[str, Any]
+) -> str:
+    metadata_name = _normalized_model_name(stage_metadata.get("model_name"))
+    manifest_name = _load_bundle_manifest_model_name(stage)
+
+    if metadata_name:
+        return metadata_name
+    if manifest_name:
+        return manifest_name
+
+    pipeline_name = _normalized_model_name(getattr(model, "model_name", None))
+    if pipeline_name:
+        return pipeline_name
+
+    step_model = getattr(model, "named_steps", None)
+    if isinstance(step_model, dict) and step_model:
+        inner_model = step_model.get("model") or next(iter(step_model.values()))
+        inner_name = _normalized_model_name(type(inner_model).__name__)
+        if inner_name:
+            return inner_name
+
+    return _normalized_model_name(model.__class__.__name__) or f"{stage}_model"
+
+
+def _build_stage1_result(
+    stage1_model: Any, stage1_input: pd.DataFrame
+) -> tuple[int, Stage1ProbabilityResult]:
+    stage1_pred = int(stage1_model.predict(stage1_input)[0])
+
+    probabilities: dict[str, float] = {
+        "single_gas": 0.0,
+        "mixture": 0.0,
+    }
+
+    if hasattr(stage1_model, "predict_proba"):
+        raw_proba = np.asarray(stage1_model.predict_proba(stage1_input)[0], dtype=float)
+        raw_proba = np.nan_to_num(raw_proba, nan=0.0, posinf=0.0, neginf=0.0)
+
+        classes = getattr(stage1_model, "classes_", None)
+        if classes is None:
+            classes = np.arange(len(raw_proba))
+
+        label_map = {0: "single_gas", 1: "mixture"}
+        for cls, prob in zip(classes, raw_proba):
+            cls_key = (
+                int(cls)
+                if isinstance(cls, (int, np.integer, float, np.floating))
+                else cls
+            )
+            try:
+                label = label_map[int(cls_key)]
+            except (TypeError, ValueError, KeyError):
+                label = str(cls_key)
+            if label in probabilities:
+                probabilities[label] = float(prob)
+    else:
+        probabilities["single_gas"] = 1.0 if stage1_pred == 0 else 0.0
+        probabilities["mixture"] = 1.0 if stage1_pred == 1 else 0.0
+
+    predicted_label = "single_gas" if stage1_pred == 0 else "mixture"
+    return stage1_pred, Stage1ProbabilityResult(
+        predicted_class=predicted_label,
+        class_probabilities=probabilities,
+    )
+
+
+def _build_stage2_probabilities(
+    stage2_model: Any, stage2_input: pd.DataFrame, class_labels: dict[str, str]
+) -> tuple[str, dict[str, float]]:
+    stage2_pred = int(stage2_model.predict(stage2_input)[0])
+
+    probabilities: dict[str, float] = {
+        "Toluene": 0.0,
+        "2-butanone": 0.0,
+    }
+
+    if hasattr(stage2_model, "predict_proba"):
+        raw_proba = np.asarray(stage2_model.predict_proba(stage2_input)[0], dtype=float)
+        raw_proba = np.nan_to_num(raw_proba, nan=0.0, posinf=0.0, neginf=0.0)
+
+        classes = getattr(stage2_model, "classes_", None)
+        if classes is None:
+            classes = np.arange(len(raw_proba))
+
+        for cls, prob in zip(classes, raw_proba):
+            cls_key = (
+                str(int(cls))
+                if isinstance(cls, (int, np.integer, float, np.floating))
+                else str(cls)
+            )
+            label = class_labels.get(cls_key, cls_key)
+            normalized = label.strip().lower()
+            if "toluene" in normalized:
+                probabilities["Toluene"] = float(prob)
+            elif "2-butanone" in normalized or "butanone" in normalized:
+                probabilities["2-butanone"] = float(prob)
+    else:
+        if stage2_pred == 1:
+            probabilities["Toluene"] = 1.0
+            probabilities["2-butanone"] = 0.0
+        else:
+            probabilities["Toluene"] = 0.0
+            probabilities["2-butanone"] = 1.0
+
+    predicted_label = class_labels.get(
+        str(stage2_pred), "Toluene" if stage2_pred == 1 else "2-butanone"
+    )
+    return predicted_label, probabilities
+
+
+def _smooth_signal(signal: np.ndarray, window_size: int = 7) -> np.ndarray:
+    if len(signal) < window_size:
+        return signal.astype(float)
+    series = pd.Series(signal.astype(float))
+    return (
+        series.rolling(window=window_size, center=True, min_periods=1).mean().to_numpy()
+    )
+
+
+def _normalize_signal(signal: np.ndarray) -> np.ndarray:
+    min_v = float(np.min(signal))
+    max_v = float(np.max(signal))
+    denom = max_v - min_v
+    if denom <= 0:
+        return np.zeros_like(signal, dtype=float)
+    return (signal - min_v) / denom
+
+
+def _feature_dict_from_raw_request(
+    request: PredictRawRequest,
+    window_size: int,
+    step_size: int,
+) -> dict[str, float]:
+    raw_df = pd.DataFrame(
+        [{"second": float(p[0]), "sensor": float(p[1])} for p in request.samples]
+    )
+    raw_df = raw_df.sort_values("second").reset_index(drop=True)
+
+    time_axis = raw_df["second"].to_numpy(dtype=float)
+    signal = raw_df["sensor"].to_numpy(dtype=float)
+    if len(signal) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="At least 10 raw samples are required",
+        )
+
+    if not np.all(np.isfinite(time_axis)) or not np.all(np.isfinite(signal)):
+        raise HTTPException(
+            status_code=400,
+            detail="Raw samples must contain finite numeric values",
+        )
+
+    if np.any(np.diff(time_axis) <= 0):
+        raise HTTPException(
+            status_code=400,
+            detail="Raw sample times must be strictly increasing",
+        )
+
+    time_axis = time_axis - float(time_axis[0])
+    normalized = _normalize_signal(_smooth_signal(signal))
+    run_id = request.run_id or "api_raw_run"
+
+    processed_df = pd.DataFrame(
+        [
+            {
+                "run_id": run_id,
+                "experiment": "api_raw",
+                "experiment_folder": "api_raw",
+                "run_folder": "api_raw",
+                "repeat_index": 0,
+                "time": time_axis.tolist(),
+                "signal_normalized": normalized.tolist(),
+            }
+        ]
+    )
+
+    windowed_df = build_windowed_timeseries(
+        processed_df=processed_df,
+        window_size=window_size,
+        step_size=step_size,
+    )
+    if windowed_df.empty:
+        windowed_df = pd.DataFrame(
+            [
+                {
+                    "run_id": run_id,
+                    "experiment": "api_raw",
+                    "experiment_folder": "api_raw",
+                    "run_folder": "api_raw",
+                    "repeat_index": 0,
+                    "window_id": f"{run_id}_w0",
+                    "start_idx": 0,
+                    "end_idx": int(len(normalized) - 1),
+                    "time_start": float(time_axis[0]),
+                    "time_end": float(time_axis[-1]),
+                    "signal_window": normalized.tolist(),
+                }
+            ]
+        )
+
+    features_df = build_feature_table(windowed_df)
+    if features_df.empty:
+        raise HTTPException(
+            status_code=400,
+            detail="Could not extract features from raw samples",
+        )
+
+    numeric_features = features_df.select_dtypes(include=[np.number])
+    aggregated = {
+        str(k): float(v)
+        for k, v in numeric_features.mean(axis=0).to_dict().items()
+        if np.isfinite(v)
+    }
+    if "sign_changes" in aggregated and "diff_sign_changes" not in aggregated:
+        aggregated["diff_sign_changes"] = aggregated["sign_changes"]
+    if "q25" in aggregated and "q75" in aggregated:
+        aggregated.setdefault("range", aggregated["q75"] - aggregated["q25"])
+    if "mean" in aggregated and "std" in aggregated:
+        mean = aggregated["mean"]
+        aggregated.setdefault(
+            "cv", 0.0 if abs(mean) < 1e-12 else aggregated["std"] / mean
+        )
+
+    return aggregated
+
+
+def _predict_from_feature_dict(
+    feature_dict: dict[str, float],
+    run_id: str | None,
+    event_id: str | None,
+) -> PredictResponse:
+    if not feature_dict:
+        raise HTTPException(
+            status_code=400, detail="No numeric feature values provided"
+        )
+
+    stage1_bundle = _stage_loader.load_stage_bundle("stage1")
+    stage2_bundle = _stage_loader.load_stage_bundle("stage2")
+
+    if stage1_bundle is None:
+        raise HTTPException(
+            status_code=500, detail="Stage-1 model bundle is missing or unreadable"
+        )
+    if stage2_bundle is None:
+        raise HTTPException(
+            status_code=500, detail="Stage-2 model bundle is missing or unreadable"
+        )
+
+    stage1_model, stage1_meta = stage1_bundle
+    stage2_model, stage2_meta = stage2_bundle
+
+    stage1_features = [str(c) for c in stage1_meta.get("feature_columns", [])]
+    stage2_features = [str(c) for c in stage2_meta.get("feature_columns", [])]
+    if not stage1_features:
+        raise HTTPException(
+            status_code=500, detail="Stage-1 metadata missing feature_columns"
+        )
+    if not stage2_features:
+        raise HTTPException(
+            status_code=500, detail="Stage-2 metadata missing feature_columns"
+        )
+
+    stage1_input = _align_features(feature_dict, stage1_features)
+    stage1_pred, stage1_result = _build_stage1_result(stage1_model, stage1_input)
+
+    model_versions = {
+        "stage1": _resolve_reported_model_name("stage1", stage1_model, stage1_meta),
+        "stage2": _resolve_reported_model_name("stage2", stage2_model, stage2_meta),
+    }
+
+    if stage1_pred == 1:
+        return PredictResponse(
+            run_id=run_id,
+            event_id=event_id,
+            route="stage1_only",
+            stage1_result=stage1_result,
+            stage2_result=None,
+            model_versions=model_versions,
+        )
+
+    stage2_input = _align_features(feature_dict, stage2_features)
+    class_labels = stage2_meta.get("class_labels", {"0": "2-butanone", "1": "Toluene"})
+    stage2_pred_label, class_probabilities = _build_stage2_probabilities(
+        stage2_model,
+        stage2_input,
+        class_labels,
+    )
+
+    return PredictResponse(
+        run_id=run_id,
+        event_id=event_id,
+        route="stage1_stage2",
+        stage1_result=stage1_result,
+        stage2_result=Stage2ProbabilityResult(
+            predicted_class=stage2_pred_label,
+            class_probabilities=class_probabilities,
+        ),
+        model_versions=model_versions,
+    )
+
+
+if FASTAPI_AVAILABLE:
+    _api_config = {}
+    try:
+        _api_config = load_config("configs/default.yaml").get("api", {})
+    except Exception:
+        _api_config = {}
+    _raw_window_size = int(_api_config.get("raw_window_size", 100))
+    _raw_step_size = int(_api_config.get("raw_step_size", 50))
+
+    app = FastAPI(
+        title="OBSeRVeD VOC ML API",
+        description="Hierarchical inference using stage-1 mixture detection and stage-2 single-gas probability models",
+        version="0.2.0",
+    )
+
+    @app.get("/health", response_model=HealthResponse)
+    def health() -> HealthResponse:
+        return HealthResponse(
+            status="healthy",
+            uptime_seconds=(time.time() - _startup_time),
+            service_name="observed-voc-api",
+            version="0.2.0",
+            model_family=None,
+            models_available=_list_local_available_models(),
+        )
+
+    @app.get("/model-info", response_model=ModelInfoResponse)
+    def model_info(model_family: str = "stage1") -> ModelInfoResponse:
+        stage = model_family.strip().lower()
+        if stage not in {"stage1", "stage2"}:
+            raise HTTPException(
+                status_code=400, detail="model_family must be 'stage1' or 'stage2'"
+            )
+
+        metadata = _stage_loader.load_stage_metadata(stage)
+        if not metadata:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Model bundle for {stage} is not available under artifacts/models",
+            )
+
+        return ModelInfoResponse(
+            model_family=stage,
+            model_type=str(metadata.get("model_name", "unknown")),
+            training_data_version=str(REPO_ROOT / "data" / "processed"),
+            git_commit=_git_commit,
+            metrics_summary=None,
+            registry_stage="local",
+            available_models=_stage_loader.list_available_models(),
+        )
+
+    @app.post("/predict", response_model=PredictResponse)
+    def predict(request: PredictRequest) -> PredictResponse:
+        feature_dict = _request_to_feature_dict(request)
+        return _predict_from_feature_dict(
+            feature_dict=feature_dict,
+            run_id=request.run_id,
+            event_id=request.event_id,
+        )
+
+    @app.post(
+        "/predict-raw",
+        response_model=PredictResponse,
+        summary="Predict From Raw Time-Series",
+        description=(
+            "Input must be `samples` as numeric pairs `[second, sensor_value]`. "
+            "First number is time in seconds, second number is sensor reading."
+        ),
+    )
+    def predict_raw(
+        request: PredictRawRequest = Body(
+            ...,
+            description=(
+                "Raw samples as `[second, sensor_value]`. "
+                "Example: `[[10, 20], [15, 25], [20, 22]]`."
+            ),
+            examples={
+                "basic": {
+                    "summary": "Raw pair input",
+                    "description": "Each item is [second, sensor_value].",
+                    "value": {
+                        "run_id": "raw-r1",
+                        "event_id": "e1",
+                        "samples": [
+                            [10.0, 20.0],
+                            [15.0, 25.0],
+                            [20.0, 22.0],
+                            [25.0, 30.0],
+                            [30.0, 28.0],
+                            [35.0, 31.0],
+                            [40.0, 33.0],
+                            [45.0, 34.0],
+                            [50.0, 36.0],
+                            [55.0, 35.0],
+                        ],
+                    },
+                }
+            },
+        ),
+    ) -> PredictResponse:
+        feature_dict = _feature_dict_from_raw_request(
+            request=request,
+            window_size=_raw_window_size,
+            step_size=_raw_step_size,
+        )
+        return _predict_from_feature_dict(
+            feature_dict=feature_dict,
+            run_id=request.run_id,
+            event_id=request.event_id,
+        )
+
+else:
+    app = None

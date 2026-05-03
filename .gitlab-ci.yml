@@ -1,0 +1,493 @@
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+default:
+  image: python:3.11-bookworm
+
+variables:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  PYTHONPATH: "."
+  ENABLE_DVC_CACHE_OPTIMIZATION: "0"
+  QUALITY_PATHS: "api dags pipelines scripts src tests"
+
+stages:
+  - quality
+  - validate
+  - test
+  - orchestrate
+  - dvc
+  - model-validate
+  - model-publish
+  - deploy
+
+.python-base:
+  cache:
+    key:
+      files:
+        - requirements.txt
+    paths:
+      - .cache/pip/
+    policy: pull-push
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+
+.dvc-job-base:
+  extends: .python-base
+  stage: dvc
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - dvc.yaml
+        - dvc.lock
+        - params.yaml
+        - src/**/*
+        - scripts/**/*
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "push"
+      changes:
+        - dvc.yaml
+        - dvc.lock
+        - params.yaml
+        - src/**/*
+        - scripts/**/*
+      when: manual
+  cache:
+    key:
+      files:
+        - requirements.txt
+        - dvc.lock
+    paths:
+      - .cache/pip/
+      - .dvc/cache/
+    policy: pull-push
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install "dvc[s3]"
+
+.quality-base:
+  extends: .python-base
+  stage: quality
+
+.pytest-base:
+  extends: .python-base
+  stage: test
+
+lint:
+  extends: .quality-base
+  script:
+    - pip install ruff
+    - ruff check $QUALITY_PATHS
+
+format-check:
+  extends: .quality-base
+  script:
+    - pip install black
+    - black --check $QUALITY_PATHS
+
+import-check:
+  extends: .quality-base
+  script:
+    - pip install isort
+    - isort --profile black --check-only $QUALITY_PATHS
+
+validate-data:
+  extends: .python-base
+  stage: validate
+  script:
+    - python scripts/validate_dataset.py
+  artifacts:
+    when: always
+    paths:
+      - reports/data_validation.json
+      - reports/data_validation.md
+
+airflow-dag-parse:
+  stage: validate
+  image:
+    name: apache/airflow:2.8.2-python3.11
+    entrypoint: [""]
+  variables:
+    PYTHONPATH: "$CI_PROJECT_DIR"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - dags/**/*
+        - src/**/*
+        - scripts/validate_airflow_dag.py
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "push"
+      changes:
+        - dags/**/*
+        - src/**/*
+        - scripts/validate_airflow_dag.py
+      when: on_success
+  script:
+    - python --version
+    - python scripts/validate_airflow_dag.py --dag-dir dags --report reports/dag_parse_validation.json
+  artifacts:
+    when: always
+    paths:
+      - reports/dag_parse_validation.json
+
+pytest-unit:
+  extends: .pytest-base
+  coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+%)/'
+  script:
+    - pip install pytest-cov
+    - pytest -q --tb=short tests/unit -m "unit and not requires_dat_file" --cov=src --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov
+  artifacts:
+    when: always
+    paths:
+      - coverage.xml
+      - htmlcov/
+
+pytest-integration:
+  extends: .pytest-base
+  script:
+    - pytest -q --tb=short tests/integration -m "integration and not requires_dat_file"
+
+pytest-api:
+  extends: .pytest-base
+  script:
+    - pytest -q --tb=short tests/api -m "api and not requires_dat_file"
+
+airflow-trigger:
+  extends: .python-base
+  stage: orchestrate
+  needs:
+    - job: lint
+    - job: format-check
+    - job: import-check
+    - job: validate-data
+    - job: airflow-dag-parse
+      optional: true
+    - job: pytest-unit
+    - job: pytest-integration
+    - job: pytest-api
+    - job: airflow-health-check
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"
+      changes:
+        - src/**/*
+        - scripts/**/*
+        - dags/**/*
+        - params.yaml
+        - dvc.yaml
+        - dvc.lock
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - src/**/*
+        - scripts/**/*
+        - dags/**/*
+        - params.yaml
+        - dvc.yaml
+        - dvc.lock
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "push"
+      changes:
+        - src/**/*
+        - scripts/**/*
+        - dags/**/*
+        - params.yaml
+        - dvc.yaml
+        - dvc.lock
+      when: on_success
+  script:
+    - python scripts/trigger_airflow_dag.py --dag-id gas_sensor_ml_pipeline --report reports/airflow_trigger.json
+  artifacts:
+    when: always
+    paths:
+      - reports/airflow_trigger.json
+
+airflow-health-check:
+  extends: .python-base
+  stage: orchestrate
+  needs:
+    - job: lint
+    - job: format-check
+    - job: import-check
+    - job: validate-data
+    - job: airflow-dag-parse
+      optional: true
+    - job: pytest-unit
+    - job: pytest-integration
+    - job: pytest-api
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"
+      changes:
+        - src/**/*
+        - scripts/**/*
+        - dags/**/*
+        - params.yaml
+        - dvc.yaml
+        - dvc.lock
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - src/**/*
+        - scripts/**/*
+        - dags/**/*
+        - params.yaml
+        - dvc.yaml
+        - dvc.lock
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "push"
+      changes:
+        - src/**/*
+        - scripts/**/*
+        - dags/**/*
+        - params.yaml
+        - dvc.yaml
+        - dvc.lock
+      when: on_success
+  script:
+    - python scripts/check_airflow_health.py --report reports/airflow_health.json
+  artifacts:
+    when: always
+    paths:
+      - reports/airflow_health.json
+
+dvc-repro:
+  extends: .dvc-job-base
+  script:
+    - if [ "$ENABLE_DVC_CACHE_OPTIMIZATION" = "1" ]; then mkdir -p .dvc/cache; echo "DVC cache optimization enabled"; else echo "DVC cache optimization disabled"; fi
+    - dvc remote modify --local minio endpointurl "$DVC_S3_ENDPOINT_URL"
+    - dvc remote modify --local minio use_ssl false
+    - dvc remote modify --local minio access_key_id "$AWS_ACCESS_KEY_ID"
+    - dvc remote modify --local minio secret_access_key "$AWS_SECRET_ACCESS_KEY"
+    - dvc remote modify --local minio region "$AWS_DEFAULT_REGION"
+    - dvc remote modify --local minio listobjects true
+    - dvc pull
+    - dvc repro
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - reports/metrics.json
+      - reports/confusion_matrix.png
+      - reports/feature_importance.csv
+      - reports/feature_importance.png
+      - logs/
+      - dvc.lock
+
+validate-model:
+  extends: .python-base
+  stage: model-validate
+  needs:
+    - job: dvc-repro
+      optional: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  script:
+    - python scripts/check_metrics.py --metrics reports/metrics.json --baseline reports/baseline_metrics.json --report-json reports/model_validation.json --report-md reports/model_validation.md
+  artifacts:
+    when: always
+    paths:
+      - reports/model_validation.json
+      - reports/model_validation.md
+
+publish-stage1-model-bundle:
+  extends: .python-base
+  stage: model-publish
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - src/models/**/*
+        - src/features/**/*
+        - pipelines/**/*
+        - scripts/**/*
+        - dvc.yaml
+        - dvc.lock
+        - params.yaml
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"
+      changes:
+        - src/models/**/*
+        - src/features/**/*
+        - pipelines/**/*
+        - scripts/**/*
+        - dvc.yaml
+        - dvc.lock
+        - params.yaml
+      when: on_success
+  script:
+    - unset OBSERVED_STORAGE_S3_ENDPOINT_URL DVC_S3_ENDPOINT_URL MLFLOW_S3_ENDPOINT_URL MINIO_PUBLIC_ENDPOINT MINIO_ENDPOINT
+    - export OBSERVED_STORAGE_BACKEND="s3"
+    - export OBSERVED_STORAGE_ENV="${OBSERVED_STORAGE_ENV:-prod}"
+    - export OBSERVED_STORAGE_BUCKET_MODELS="${AWS_S3_MODELS_BUCKET:-${OBSERVED_STORAGE_BUCKET_MODELS:-models}}"
+    - export AWS_S3_ADDRESSING_STYLE="${AWS_S3_ADDRESSING_STYLE:-virtual}"
+    - python scripts/publish_model_bundle.py --stage stage1 --model-version "git-${CI_COMMIT_SHORT_SHA}" --storage-env "$OBSERVED_STORAGE_ENV" --report reports/stage1_bundle_publish.json
+  artifacts:
+    when: always
+    paths:
+      - reports/stage1_bundle_publish.json
+
+publish-stage2-model-bundle:
+  extends: .python-base
+  stage: model-publish
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - src/models/**/*
+        - src/features/**/*
+        - pipelines/**/*
+        - scripts/**/*
+        - dvc.yaml
+        - dvc.lock
+        - params.yaml
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"
+      changes:
+        - src/models/**/*
+        - src/features/**/*
+        - pipelines/**/*
+        - scripts/**/*
+        - dvc.yaml
+        - dvc.lock
+        - params.yaml
+      when: on_success
+  script:
+    - unset OBSERVED_STORAGE_S3_ENDPOINT_URL DVC_S3_ENDPOINT_URL MLFLOW_S3_ENDPOINT_URL MINIO_PUBLIC_ENDPOINT MINIO_ENDPOINT
+    - export OBSERVED_STORAGE_BACKEND="s3"
+    - export OBSERVED_STORAGE_ENV="${OBSERVED_STORAGE_ENV:-prod}"
+    - export OBSERVED_STORAGE_BUCKET_MODELS="${AWS_S3_MODELS_BUCKET:-${OBSERVED_STORAGE_BUCKET_MODELS:-models}}"
+    - export AWS_S3_ADDRESSING_STYLE="${AWS_S3_ADDRESSING_STYLE:-virtual}"
+    - python scripts/publish_model_bundle.py --stage stage2 --model-version "git-${CI_COMMIT_SHORT_SHA}" --storage-env "$OBSERVED_STORAGE_ENV" --report reports/stage2_bundle_publish.json
+  artifacts:
+    when: always
+    paths:
+      - reports/stage2_bundle_publish.json
+
+storage-smoke:
+  extends: .dvc-job-base
+  image: python:3.11-bookworm
+  services:
+    - name: docker:27-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_DRIVER: overlay2
+    DOCKER_COMPOSE_BIN: docker compose
+  script:
+    - apt-get update
+    - apt-get install -y docker.io docker-compose-plugin
+    - cp .env.example .env
+    - if [ "$ENABLE_DVC_CACHE_OPTIMIZATION" = "1" ]; then mkdir -p .dvc/cache; echo "DVC cache optimization enabled"; else echo "DVC cache optimization disabled"; fi
+    - python scripts/run_storage_smoke.py --compose-file docker/docker-compose.yml
+
+deploy-ecs:
+  stage: deploy
+  image: docker:27-cli
+  needs:
+    - job: lint
+    - job: format-check
+    - job: import-check
+    - job: validate-data
+    - job: pytest-unit
+    - job: pytest-integration
+    - job: pytest-api
+    - job: publish-stage1-model-bundle
+      optional: true
+      artifacts: true
+    - job: publish-stage2-model-bundle
+      optional: true
+      artifacts: true
+  services:
+    - name: docker:27-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_DRIVER: overlay2
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"
+      when: on_success
+  script:
+    - apk add --no-cache jq
+    - export ECR_REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
+    - export ECR_REPOSITORY="observed-api"
+    - export IMAGE_URI_LATEST="$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+    - export IMAGE_URI_SHA="$ECR_REGISTRY/$ECR_REPOSITORY:$CI_COMMIT_SHORT_SHA"
+    - export OBSERVED_STORAGE_BUCKET_MODELS="${AWS_S3_MODELS_BUCKET:-${OBSERVED_STORAGE_BUCKET_MODELS:-models}}"
+    - export OBSERVED_STORAGE_ENV="${OBSERVED_STORAGE_ENV:-prod}"
+    - export STAGE1_MODEL_VERSION=""
+    - export STAGE2_MODEL_VERSION=""
+    - if [ -f reports/stage1_bundle_publish.json ]; then export STAGE1_MODEL_VERSION="$(jq -r '.model_version // empty' reports/stage1_bundle_publish.json)"; fi
+    - if [ -f reports/stage2_bundle_publish.json ]; then export STAGE2_MODEL_VERSION="$(jq -r '.model_version // empty' reports/stage2_bundle_publish.json)"; fi
+    - echo "Resolved publish versions - stage1='${STAGE1_MODEL_VERSION:-unchanged}', stage2='${STAGE2_MODEL_VERSION:-unchanged}'"
+    - docker build -f docker/Dockerfile -t observed-api:latest .
+    - docker run --rm -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_DEFAULT_REGION -e AWS_PAGER="" amazon/aws-cli:2.34.28 ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+    - docker tag observed-api:latest "$IMAGE_URI_LATEST"
+    - docker tag observed-api:latest "$IMAGE_URI_SHA"
+    - docker push "$IMAGE_URI_LATEST"
+    - docker push "$IMAGE_URI_SHA"
+    - docker run --rm -v "$CI_PROJECT_DIR:/workspace" -w /workspace -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_DEFAULT_REGION -e AWS_PAGER="" amazon/aws-cli:2.34.28 ecs describe-task-definition --task-definition observed-api-task --region "$AWS_DEFAULT_REGION" --query taskDefinition > reports/current_task_definition.json
+    - |
+      jq \
+        --arg stage1 "$STAGE1_MODEL_VERSION" \
+        --arg stage2 "$STAGE2_MODEL_VERSION" \
+        --arg models_bucket "$OBSERVED_STORAGE_BUCKET_MODELS" \
+        --arg storage_env "$OBSERVED_STORAGE_ENV" \
+        '
+          def set_env(name; value):
+            .environment = ((.environment // []) | map(select(.name != name)) + [{"name": name, "value": value}]);
+          . as $root
+          | {
+              family,
+              taskRoleArn,
+              executionRoleArn,
+              networkMode,
+              containerDefinitions,
+              volumes,
+              placementConstraints,
+              requiresCompatibilities,
+              cpu,
+              memory,
+              runtimePlatform,
+              pidMode,
+              ipcMode,
+              proxyConfiguration,
+              inferenceAccelerators,
+              ephemeralStorage
+            }
+          | .containerDefinitions = (
+              .containerDefinitions
+              | map(
+                  if .name == "observed-api" then
+                    (
+                      .
+                      | set_env("OBSERVED_STORAGE_BACKEND"; "s3")
+                      | set_env("OBSERVED_ENABLE_OBJECT_STORAGE_MODEL_FALLBACK"; "true")
+                      | set_env("OBSERVED_STORAGE_BUCKET_MODELS"; $models_bucket)
+                      | set_env("OBSERVED_STORAGE_ENV"; $storage_env)
+                      | if ($stage1 | length) > 0 then set_env("OBSERVED_STAGE1_MODEL_VERSION"; $stage1) else . end
+                      | if ($stage2 | length) > 0 then set_env("OBSERVED_STAGE2_MODEL_VERSION"; $stage2) else . end
+                    )
+                  else . end
+                )
+            )
+          | with_entries(select(.value != null))
+        ' reports/current_task_definition.json > reports/register_task_definition.json
+    - docker run --rm -v "$CI_PROJECT_DIR:/workspace" -w /workspace -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_DEFAULT_REGION -e AWS_PAGER="" amazon/aws-cli:2.34.28 ecs register-task-definition --cli-input-json file://reports/register_task_definition.json --region "$AWS_DEFAULT_REGION" > reports/registered_task_definition.json
+    - export NEW_TASK_DEFINITION_ARN="$(jq -r '.taskDefinition.taskDefinitionArn' reports/registered_task_definition.json)"
+    - test -n "$NEW_TASK_DEFINITION_ARN"
+    - echo "Deploying task definition - $NEW_TASK_DEFINITION_ARN"
+    - docker run --rm -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_DEFAULT_REGION -e AWS_PAGER="" amazon/aws-cli:2.34.28 ecs update-service --cluster observed-api-cluster --service observed-api-service --task-definition "$NEW_TASK_DEFINITION_ARN" --force-new-deployment --region "$AWS_DEFAULT_REGION"

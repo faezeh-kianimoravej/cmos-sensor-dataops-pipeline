@@ -1,0 +1,32 @@
+{
+  "stage": "stage1",
+  "model_name": "stage1-mixture-detector",
+  "model_version": "model-20260417T163351Z",
+  "storage_environment": "dev",
+  "published_at": "2026-04-17T16:33:52Z",
+  "artifacts": {
+    "model": {
+      "environment": "dev",
+      "model_family": "stage1",
+      "model_name": "stage1-mixture-detector",
+      "model_version": "model-20260417T163351Z",
+      "bucket": "models",
+      "prefix": "stage1/stage1-mixture-detector/model-20260417T163351Z/",
+      "key": "stage1/stage1-mixture-detector/model-20260417T163351Z/model.joblib",
+      "uri": "s3://models/stage1/stage1-mixture-detector/model-20260417T163351Z/model.joblib"
+    },
+    "metadata": {
+      "environment": "dev",
+      "model_family": "stage1",
+      "model_name": "stage1-mixture-detector",
+      "model_version": "model-20260417T163351Z",
+      "bucket": "models",
+      "prefix": "stage1/stage1-mixture-detector/model-20260417T163351Z/",
+      "key": "stage1/stage1-mixture-detector/model-20260417T163351Z/metadata.json",
+      "uri": "s3://models/stage1/stage1-mixture-detector/model-20260417T163351Z/metadata.json"
+    }
+  },
+  "source": {
+    "publisher": "train_stage1_mixture_detector"
+  }
+}

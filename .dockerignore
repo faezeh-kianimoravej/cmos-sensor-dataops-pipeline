@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# VCS / editor
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Build / artifacts not required in image build context
+build/
+dist/
+*.egg-info/
+airflow_logs/
+mlruns/
+artifacts/mlruns/
+artifacts/mlflow/
+artifacts/test_tmp/
+reports/
+logs/
+
+# Data and local caches
+data/interim/
+data/processed/
+data/raw/
+data/synthetic/
+.dvc/cache/
+pytest-cache-files-*/
+
+# Project runtime folders not needed in image
+notebooks/
+Tolouene/archive/
+docker/airflow/logs/
+docker/airflow/plugins/
+
+# OS
+.DS_Store
+Thumbs.db

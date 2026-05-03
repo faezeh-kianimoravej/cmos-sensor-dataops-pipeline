@@ -1,0 +1,50 @@
+{
+  "status": "pass",
+  "checks": [
+    {
+      "name": "required-files-exist",
+      "passed": true,
+      "details": "All required files are present."
+    },
+    {
+      "name": "expected-columns-processed_timeseries",
+      "passed": true,
+      "details": "Columns match a supported schema for processed_timeseries."
+    },
+    {
+      "name": "expected-columns-windowed_timeseries",
+      "passed": true,
+      "details": "All expected columns exist in windowed_timeseries."
+    },
+    {
+      "name": "expected-columns-features_timeseries",
+      "passed": true,
+      "details": "Columns match a supported schema for features_timeseries."
+    },
+    {
+      "name": "missing-values-processed_timeseries",
+      "passed": true,
+      "details": "No unexpected missing values in processed_timeseries."
+    },
+    {
+      "name": "missing-values-windowed_timeseries",
+      "passed": true,
+      "details": "No unexpected missing values in windowed_timeseries."
+    },
+    {
+      "name": "missing-values-features_timeseries",
+      "passed": true,
+      "details": "No unexpected missing values in features_timeseries."
+    },
+    {
+      "name": "sensor-value-ranges",
+      "passed": true,
+      "details": "Normalized sensor values are within [0, 1]."
+    },
+    {
+      "name": "train-test-leakage",
+      "passed": true,
+      "details": "No train/test leakage detected."
+    }
+  ]
+}

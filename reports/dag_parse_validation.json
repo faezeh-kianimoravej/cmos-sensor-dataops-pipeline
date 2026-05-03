@@ -1,0 +1,19 @@
+{
+  "status": "fail",
+  "dag_dir": "dags",
+  "checks": [
+    {
+      "name": "python-syntax-parse-all-dags",
+      "passed": true,
+      "details": "Python syntax parse passed for 1 DAG file(s)."
+    },
+    {
+      "name": "airflow-dag-parse",
+      "passed": false,
+      "details": "Airflow parse failed: module 'os' has no attribute 'register_at_fork'"
+    }
+  ],
+  "dag_files": [
+    "dags\\gas_sensor_ml_pipeline_dag.py"
+  ]
+}

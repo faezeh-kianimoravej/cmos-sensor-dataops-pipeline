@@ -1,0 +1,210 @@
+services:
+  minio:
+    container_name: observed-minio
+    image: minio/minio:RELEASE.2024-10-29T16-01-48Z
+    command: server /data --console-address ":${MINIO_CONSOLE}"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_REGION: ${MINIO_REGION}
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+
+  minio-init:
+    container_name: observed-minio-init
+    image: minio/mc:RELEASE.2024-10-08T09-37-26Z
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - >
+        until mc alias set observed ${MINIO_ENDPOINT} ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}; do
+          echo "Waiting for MinIO to become available...";
+          sleep 2;
+        done &&
+        mc mb --ignore-existing observed/mlflow-artifacts &&
+        mc mb --ignore-existing observed/models &&
+        mc mb --ignore-existing observed/datasets &&
+        mc mb --ignore-existing observed/reports &&
+        mc mb --ignore-existing observed/batch-predictions
+    environment:
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    depends_on:
+      - minio
+
+  postgres:
+    container_name: airflow-postgres
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  airflow-init:
+    container_name: airflow-init
+    image: apache/airflow:2.8.2-python3.11
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - >
+        airflow db migrate &&
+        airflow users create
+        --username admin
+        --password admin
+        --firstname Admin
+        --lastname User
+        --role Admin
+        --email admin@example.com || true
+    environment:
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/workspace/dags
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS: "False"
+      AIRFLOW__LOGGING__BASE_LOG_FOLDER: /opt/airflow/logs
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+      AWS_S3_ADDRESSING_STYLE: ${AWS_S3_ADDRESSING_STYLE}
+      PYTHONPATH: /opt/airflow/workspace
+      _PIP_ADDITIONAL_REQUIREMENTS: "joblib mlflow pandas numpy scikit-learn scipy pyarrow pyyaml email-validator>=2.0.0"
+    user: "50000:0"
+    volumes:
+      - ..:/opt/airflow/workspace
+      - ../airflow_logs:/opt/airflow/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  airflow-webserver:
+    container_name: airflow-webserver
+    image: apache/airflow:2.8.2-python3.11
+    command: webserver
+    environment:
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/workspace/dags
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS: "False"
+      AIRFLOW__WEBSERVER__WORKERS: "1"
+      AIRFLOW__WEBSERVER__WEB_SERVER_WORKER_TIMEOUT: "180"
+      AIRFLOW__LOGGING__BASE_LOG_FOLDER: /opt/airflow/logs
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+      AWS_S3_ADDRESSING_STYLE: ${AWS_S3_ADDRESSING_STYLE}
+      PYTHONPATH: /opt/airflow/workspace
+      _PIP_ADDITIONAL_REQUIREMENTS: "joblib mlflow pandas numpy scikit-learn scipy pyarrow pyyaml email-validator>=2.0.0"
+    user: "50000:0"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ..:/opt/airflow/workspace
+      - ../airflow_logs:/opt/airflow/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  airflow-scheduler:
+    container_name: airflow-scheduler
+    image: apache/airflow:2.8.2-python3.11
+    command: scheduler
+    environment:
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/workspace/dags
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS: "False"
+      AIRFLOW__LOGGING__BASE_LOG_FOLDER: /opt/airflow/logs
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+      AWS_S3_ADDRESSING_STYLE: ${AWS_S3_ADDRESSING_STYLE}
+      PYTHONPATH: /opt/airflow/workspace
+      _PIP_ADDITIONAL_REQUIREMENTS: "joblib mlflow pandas numpy scikit-learn scipy pyarrow pyyaml email-validator>=2.0.0"
+    user: "50000:0"
+    volumes:
+      - ..:/opt/airflow/workspace
+      - ../airflow_logs:/opt/airflow/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  mlflow:
+    container_name: mlflow
+    image: ghcr.io/mlflow/mlflow:v2.14.0
+    command: 
+      - mlflow
+      - server
+      - --backend-store-uri
+      - sqlite:////mlflow/mlflow.db
+      - --default-artifact-root
+      - s3://mlflow-artifacts
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "5000"
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../artifacts/mlflow:/mlflow
+    environment:
+      - PYTHONUNBUFFERED=1
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - AWS_S3_ADDRESSING_STYLE=${AWS_S3_ADDRESSING_STYLE}
+      - MLFLOW_S3_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  observed-api:
+    container_name: observed-api
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: uvicorn api.app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../data:/app/data
+      - ../artifacts:/app/artifacts
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+volumes:
+  minio_data:
+  postgres_data:

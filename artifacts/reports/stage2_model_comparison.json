@@ -1,0 +1,26 @@
+[
+  {
+    "model":"logistic_regression",
+    "mean_accuracy":0.5921560609,
+    "std_accuracy":0.115740281,
+    "mean_f1":0.7189965025
+  },
+  {
+    "model":"svm_rbf",
+    "mean_accuracy":0.5799138429,
+    "std_accuracy":0.116343096,
+    "mean_f1":0.7179455184
+  },
+  {
+    "model":"random_forest",
+    "mean_accuracy":0.584721989,
+    "std_accuracy":0.1384248075,
+    "mean_f1":0.7077630854
+  },
+  {
+    "model":"gradient_boosting",
+    "mean_accuracy":0.5764170515,
+    "std_accuracy":0.1546413217,
+    "mean_f1":0.695149735
+  }
+]

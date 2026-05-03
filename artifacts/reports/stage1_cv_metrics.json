@@ -1,0 +1,9 @@
+{
+  "stage": "stage1",
+  "best_model": "gradient_boosting",
+  "mean_accuracy": 0.81785283266254,
+  "mean_f1": 0.30365712107825304,
+  "n_samples": 2025,
+  "n_runs": 14,
+  "selection_metric": "mean_f1"
+}

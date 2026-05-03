@@ -1,0 +1,148 @@
+project:
+  name: observed-voc-mlops
+  version: 0.1.0
+
+paths:
+  raw_data_dir: data/raw
+  interim_data_dir: data/interim
+  processed_data_dir: data/processed
+  synthetic_data_dir: data/synthetic
+  models_dir: artifacts/models
+  reports_dir: artifacts/reports
+  features_path: data/processed/dat_runs/features_event_table_dat.parquet
+  events_path: data/processed/dat_runs/events_detected_dat.parquet
+  dat_path: data/raw/tolouene/tolouene_aug_2024.dat
+  mlflow_db: artifacts/mlflow/mlflow_tracking.db
+  mlflow_runs: artifacts/mlruns
+
+seed:
+  value: 42
+
+training:
+  test_size: 0.2
+  random_state: 42
+  model_families:
+    - classical_ml
+    - unsupervised
+    - deep_learning
+  default_target: auc
+  default_model_family: classical_ml
+
+model_paths:
+  classical_ml: artifacts/models/baseline_model.pkl
+  unsupervised: artifacts/models/unsupervised_model.pkl
+  deep_learning: artifacts/models/deep_learning_model.pkl
+
+artifact_outputs:
+  classical_ml:
+    metrics: artifacts/reports/training_metrics.json
+    comparison: artifacts/reports/model_comparison.json
+    feature_importance: artifacts/reports/feature_importance.parquet
+    test_errors: artifacts/reports/test_prediction_errors.parquet
+    confusion_matrix: artifacts/reports/confusion_matrix.json
+    predictions: data/processed/predictions_classification.parquet
+  unsupervised:
+    metrics: artifacts/reports/training_metrics_unsupervised.json
+    comparison: artifacts/reports/model_comparison_unsupervised.json
+    feature_importance: artifacts/reports/feature_importance_unsupervised.parquet
+    test_errors: artifacts/reports/test_prediction_errors_unsupervised.parquet
+    confusion_matrix: artifacts/reports/confusion_matrix_unsupervised.json
+    predictions: data/processed/predictions_unsupervised.parquet
+  deep_learning:
+    metrics: artifacts/reports/training_metrics_deep_learning.json
+    comparison: artifacts/reports/model_comparison_deep_learning.json
+    feature_importance: artifacts/reports/feature_importance_deep_learning.parquet
+    test_errors: artifacts/reports/test_prediction_errors_deep_learning.parquet
+    confusion_matrix: artifacts/reports/confusion_matrix_deep_learning.json
+    predictions: data/processed/predictions_deep_learning.parquet
+
+api:
+  port: 8000
+  reload: true
+  default_data_path: data/processed/dat_runs/features_event_table_dat.parquet
+
+mlflow:
+  experiment_name: OBSERVED_CMOS_VOC_MLOPS
+  tracking_db_path: artifacts/mlflow/mlflow_tracking.db
+  artifacts_dir: artifacts/mlruns
+  tracking_uri: sqlite:///artifacts/mlflow/mlflow_tracking.db
+  registry_uri: sqlite:///artifacts/mlflow/mlflow_tracking.db
+
+pipeline:
+  save_intermediate: true
+  enable_monitoring: true
+
+hierarchical_pipeline:
+  seeds:
+    global: 42
+
+  cv:
+    n_splits: 3
+    shuffle: true
+
+  stage1:
+    preferred_model: logistic_regression
+    selection_metric: mean_f1
+
+  feature_engineering:
+    window_size: 100
+    step_size: 50
+    test_size: 0.2
+
+  mlflow:
+    stage1_experiment: stage1_mixture_detection
+    stage2_experiment: stage2_single_gas_probability
+
+  stage2:
+    final_model:
+      n_estimators: 200
+      learning_rate: 0.01
+      max_depth: 1
+    tuning:
+      logistic_regression:
+        C: [0.01, 0.1, 1, 10, 50]
+        class_weight: [null, balanced]
+      gradient_boosting:
+        n_estimators: [50, 100, 200]
+        learning_rate: [0.01, 0.05, 0.1]
+        max_depth: [1, 2, 3]
+
+  paths:
+    raw_input: data/raw/CMOS_addtional_datasets
+    processed_timeseries: data/processed/processed_timeseries.parquet
+    runs: data/processed/runs.parquet
+    windowed_timeseries: data/processed/windowed_timeseries.parquet
+    train_windows: data/processed/train_windows.parquet
+    test_windows: data/processed/test_windows.parquet
+    features_timeseries: data/processed/features_timeseries.parquet
+    features_single_gas: data/processed/features_single_gas.parquet
+
+    stage1_model_dir: artifacts/models/stage1_mixture_detector
+    stage2_model_dir: artifacts/models/stage2_gas_probability_model
+
+    stage1_predictions: artifacts/predictions/stage1_training_predictions.parquet
+    stage2_predictions: artifacts/predictions/stage2_training_predictions.parquet
+    batch_predictions: artifacts/predictions/batch_predictions.parquet
+
+    ingestion_summary: artifacts/reports/ingestion_summary.json
+    feature_engineering_summary: artifacts/reports/feature_engineering_summary.json
+    stage1_comparison: artifacts/reports/stage1_model_comparison.json
+    stage1_metrics: artifacts/reports/stage1_cv_metrics.json
+    stage2_subset_summary: artifacts/reports/stage2_subset_summary.json
+    stage2_comparison: artifacts/reports/stage2_model_comparison.json
+    stage2_tuning: artifacts/reports/stage2_tuning_results.json
+    stage2_metrics: artifacts/reports/stage2_cv_metrics.json
+    evaluate_stage1_report: artifacts/reports/evaluate_stage1_report.json
+    evaluate_stage2_report: artifacts/reports/evaluate_stage2_report.json
+    batch_prediction_summary: artifacts/reports/batch_prediction_summary.json
+
+airflow:
+  owner: dataops
+  schedule: "@daily"
+  catchup: false
+  retries: 2
+  retry_delay_minutes: 5
+  max_active_runs: 1
+  start_date: "2026-03-01"
+  project_root: /opt/airflow/workspace
+  python_bin: python

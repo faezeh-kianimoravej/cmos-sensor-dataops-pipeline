@@ -1,0 +1,100 @@
+stages:
+  stage1_ingest:
+    cmd: >-
+      python -m pipelines.ingest_flow
+    deps:
+      - pipelines/ingest_flow.py
+      - src/data/parser.py
+      - src/data/preprocess.py
+      - configs/default.yaml
+      - data/raw
+    outs:
+      - data/processed/processed_timeseries.parquet
+      - data/processed/runs.parquet
+      - artifacts/reports/ingestion_summary.json
+
+  stage2_feature_engineering:
+    cmd: >-
+      python -m pipelines.feature_engineering_flow
+    deps:
+      - pipelines/feature_engineering_flow.py
+      - src/data/preprocess.py
+      - src/features/extractor.py
+      - configs/default.yaml
+      - data/processed/processed_timeseries.parquet
+    outs:
+      - data/processed/windowed_timeseries.parquet
+      - data/processed/train_windows.parquet
+      - data/processed/test_windows.parquet
+      - data/processed/features_timeseries.parquet
+      - artifacts/reports/feature_engineering_summary.json
+
+  stage3_train_stage1:
+    cmd: >-
+      python -m pipelines.train_stage1_mixture_detection_flow
+    deps:
+      - pipelines/train_stage1_mixture_detection_flow.py
+      - src/models/stage1.py
+      - configs/default.yaml
+      - data/processed/features_timeseries.parquet
+    outs:
+      - artifacts/models/stage1_mixture_detector
+      - artifacts/reports/stage1_model_comparison.json
+      - artifacts/reports/stage1_cv_metrics.json
+      - artifacts/predictions/stage1_training_predictions.parquet
+
+  stage4_prepare_stage2_subset:
+    cmd: >-
+      python -m pipelines.prepare_stage2_single_gas_subset_flow
+    deps:
+      - pipelines/prepare_stage2_single_gas_subset_flow.py
+      - src/models/stage1.py
+      - configs/default.yaml
+      - data/processed/features_timeseries.parquet
+    outs:
+      - data/processed/features_single_gas.parquet
+      - artifacts/reports/stage2_subset_summary.json
+
+  stage5_train_stage2:
+    cmd: >-
+      python -m pipelines.train_stage2_single_gas_probability_flow
+    deps:
+      - pipelines/train_stage2_single_gas_probability_flow.py
+      - src/models/stage2.py
+      - configs/default.yaml
+      - data/processed/features_single_gas.parquet
+    outs:
+      - artifacts/models/stage2_gas_probability_model
+      - artifacts/reports/stage2_model_comparison.json
+      - artifacts/reports/stage2_tuning_results.json
+      - artifacts/reports/stage2_cv_metrics.json
+      - artifacts/predictions/stage2_training_predictions.parquet
+
+  stage6_evaluate:
+    cmd: >-
+      python -m pipelines.evaluate_flow
+    deps:
+      - pipelines/evaluate_flow.py
+      - pipelines/evaluate_stage1_flow.py
+      - pipelines/evaluate_stage2_flow.py
+      - src/evaluation/metrics.py
+      - configs/default.yaml
+      - artifacts/predictions/stage1_training_predictions.parquet
+      - artifacts/predictions/stage2_training_predictions.parquet
+    outs:
+      - artifacts/reports/evaluate_stage1_report.json
+      - artifacts/reports/evaluate_stage2_report.json
+
+  stage7_batch_prediction:
+    cmd: >-
+      python -m pipelines.batch_predict_flow
+    deps:
+      - pipelines/batch_predict_flow.py
+      - src/models/inference.py
+      - configs/default.yaml
+      - data/processed/features_timeseries.parquet
+      - artifacts/models/stage1_mixture_detector
+      - artifacts/models/stage2_gas_probability_model
+    outs:
+      - artifacts/predictions/batch_predictions.parquet
+      - artifacts/reports/batch_prediction_summary.json

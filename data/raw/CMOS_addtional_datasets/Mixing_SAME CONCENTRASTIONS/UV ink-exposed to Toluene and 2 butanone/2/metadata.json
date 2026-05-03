@@ -1,0 +1,9 @@
+{
+  "sensor_layer": "UV Ink",
+  "repeat_index": 2,
+  "experiment_metadata_ref": "../../experiment_metadata.json",
+  "data_files": {
+    "adc": "dataset1-ADC.txt",
+    "time": "dataset1-time.txt"
+  }
+}

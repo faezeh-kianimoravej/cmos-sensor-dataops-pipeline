@@ -1,0 +1,11 @@
+{
+  "stage": "stage2",
+  "final_model": "gradient_boosting_tuned",
+  "baseline_best_model": "logistic_regression",
+  "baseline_best_f1": 0.7189965025441492,
+  "tuned_lr_f1": 0.7392589832569589,
+  "tuned_gb_f1": 0.8649091286468957,
+  "final_selected_f1": 0.8649091286468957,
+  "n_samples": 1719,
+  "n_runs": 12
+}
